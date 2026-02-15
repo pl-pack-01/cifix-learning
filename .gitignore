@@ -1,0 +1,94 @@
+# ======================
+# Python bytecode
+# ======================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ======================
+# Virtual environments
+# ======================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ======================
+# Packaging / build
+# ======================
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ======================
+# Installer logs
+# ======================
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ======================
+# Test / coverage
+# ======================
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+hypothesis/
+
+# ======================
+# IDEs & editors
+# ======================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ======================
+# OS files
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Logs & temp files
+# ======================
+*.log
+*.tmp
+*.bak
+
+# ======================
+# Jupyter
+# ======================
+.ipynb_checkpoints/
+
+# ======================
+# Environment variables / secrets
+# ======================
+.env
+.env.*
+secrets.*
+*.pem
+*.key
+
+# ======================
+# mypy / type checking
+# ======================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ======================
+# Ruff / lint caches
+# ======================
+.ruff_cache/
+
+# ======================
+# PyCharm
+# ======================
+*.iml
