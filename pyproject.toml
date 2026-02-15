@@ -1,0 +1,20 @@
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cifix"
+version = "0.1.0"
+description = "A CLI tool built with Click"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1",
+    "requests>=2.31",
+]
+
+[project.scripts]
+cifix = "cifix.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]

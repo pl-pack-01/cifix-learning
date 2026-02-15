@@ -1,51 +1,63 @@
+import os
 import click
+from cifix.github import fetch_run_logs
 
 
 @click.group()
 @click.version_option()
-@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output.")
 @click.pass_context
-def cli(ctx, verbose):
-    """Cifix — a tool that supports reviewing CI logs and suggesting fixes."""
+def cli(ctx):
+    """Cifix — CI log analysis tool."""
     ctx.ensure_object(dict)
-    ctx.obj["VERBOSE"] = verbose
 
 
-@cli.command()
-@click.argument("name")
-@click.option("--greeting", "-g", default="Hello", help="Custom greeting.")
-def hello(name, greeting):
-    """Greet someone by NAME."""
-    click.echo(f"{greeting}, {name}!")
+@cli.command("fetch-logs")
+@click.argument("repo")
+@click.argument("run_id", type=int)
+@click.option(
+    "--token",
+    envvar="GITHUB_TOKEN",
+    help="GitHub PAT. Falls back to $GITHUB_TOKEN env var.",
+)
+def fetch_logs(repo, run_id, token):
+    """Fetch GitHub Actions logs for a workflow run.
 
+    REPO is the "owner/repo" string (e.g. octocat/hello-world).
+    RUN_ID is the numeric workflow run ID.
 
-@cli.command()
-@click.option("--count", "-c", default=1, type=int, help="Number of items.")
-@click.option("--output", "-o", type=click.Path(), help="Output file path.")
-@click.pass_context
-def generate(ctx, count, output):
-    """Generate some items."""
-    verbose = ctx.obj["VERBOSE"]
-    items = [f"item-{i}" for i in range(1, count + 1)]
+    \b
+    Examples:
+        cifix fetch-logs octocat/hello-world 12345678
+        cifix fetch-logs myorg/myrepo 99999999 --token ghp_xxx
+    """
+    if not token:
+        raise click.ClickException(
+            "GitHub token required. Set $GITHUB_TOKEN or pass --token."
+        )
 
-    if verbose:
-        click.echo(f"Generating {count} item(s)...")
+    if "/" not in repo:
+        raise click.ClickException(
+            f"Invalid repo format '{repo}'. Use 'owner/repo'."
+        )
 
-    result = "\n".join(items)
+    click.echo(f"Fetching logs for {repo} run #{run_id}...")
 
-    if output:
-        with open(output, "w") as f:
-            f.write(result)
-        click.echo(f"Written to {output}")
-    else:
-        click.echo(result)
+    try:
+        logs = fetch_run_logs(repo, run_id, token)
+    except Exception as e:
+        raise click.ClickException(str(e))
 
+    if not logs:
+        click.echo("No log files found in this run.")
+        return
 
-@cli.command()
-@click.confirmation_option(prompt="Are you sure you want to reset?")
-def reset():
-    """Reset configuration (with confirmation)."""
-    click.echo("Configuration reset.")
+    for filename, content in logs:
+        click.secho(f"\n{'='*60}", fg="cyan")
+        click.secho(f" {filename}", fg="cyan", bold=True)
+        click.secho(f"{'='*60}", fg="cyan")
+        click.echo(content)
+
+    click.echo(f"\n({len(logs)} log file(s) printed)")
 
 
 if __name__ == "__main__":
