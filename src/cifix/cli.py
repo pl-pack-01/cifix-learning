@@ -1,64 +1,77 @@
-import os
+
+"""
+Add this command to your existing Click CLI.
+
+Assumes Phase 1 gave you something like:
+    from cifix.github import fetch_run_logs
+that returns raw log text for a given run ID.
+"""
+
+import json
 import click
-from cifix.github import fetch_run_logs
+
+# -- Paste/merge into your existing cli.py --
+
+# from cifix.github import fetch_run_logs      # your Phase 1 function
+# from cifix.classifier import classify
+# from cifix.formatter import format_analysis   # see below
 
 
-@click.group()
-@click.version_option()
-@click.pass_context
-def cli(ctx):
-    """Cifix — CI log analysis tool."""
-    ctx.ensure_object(dict)
-
-
-@cli.command("fetch-logs")
-@click.argument("repo")
-@click.argument("run_id", type=int)
+@click.command()
+@click.argument("run_id")
 @click.option(
-    "--token",
-    envvar="GITHUB_TOKEN",
-    help="GitHub PAT. Falls back to $GITHUB_TOKEN env var.",
+    "--provider", "-p",
+    default="github",
+    help="CI provider (github, gitlab, jenkins).",
 )
-def fetch_logs(repo, run_id, token):
-    """Fetch GitHub Actions logs for a workflow run.
+@click.option(
+    "--output", "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format.",
+)
+@click.option(
+    "--category", "-c",
+    type=click.Choice(["all", "infra", "code"]),
+    default="all",
+    help="Filter by error category.",
+)
+@click.option(
+    "--severity", "-s",
+    type=click.Choice(["all", "fatal", "error", "warning"]),
+    default="all",
+    help="Minimum severity to show.",
+)
+def classify_cmd(run_id, provider, output, category, severity):
+    """Classify errors in a CI run's logs."""
+    from cifix.classifier import classify, AnalysisResult
+    from cifix.formatter import format_analysis
+    from cifix.github import fetch_run_logs
+    from cifix.patterns import ErrorCategory, ErrorSeverity
 
-    REPO is the "owner/repo" string (e.g. octocat/hello-world).
-    RUN_ID is the numeric workflow run ID.
+    click.echo(f"Fetching logs for run {run_id}...")
+    raw_log = fetch_run_logs(run_id)
 
-    \b
-    Examples:
-        cifix fetch-logs octocat/hello-world 12345678
-        cifix fetch-logs myorg/myrepo 99999999 --token ghp_xxx
-    """
-    if not token:
-        raise click.ClickException(
-            "GitHub token required. Set $GITHUB_TOKEN or pass --token."
-        )
+    click.echo("Classifying errors...")
+    result = classify(raw_log, provider=provider)
 
-    if "/" not in repo:
-        raise click.ClickException(
-            f"Invalid repo format '{repo}'. Use 'owner/repo'."
-        )
+    # Apply filters
+    if category != "all":
+        cat_filter = ErrorCategory.INFRASTRUCTURE if category == "infra" else ErrorCategory.CODE
+        result.errors = [e for e in result.errors if e.category == cat_filter]
 
-    click.echo(f"Fetching logs for {repo} run #{run_id}...")
+    if severity != "all":
+        sev_map = {"fatal": 0, "error": 1, "warning": 2}
+        min_sev = sev_map[severity]
+        sev_rank = {ErrorSeverity.FATAL: 0, ErrorSeverity.ERROR: 1, ErrorSeverity.WARNING: 2}
+        result.errors = [e for e in result.errors if sev_rank[e.severity] <= min_sev]
 
-    try:
-        logs = fetch_run_logs(repo, run_id, token)
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-    if not logs:
-        click.echo("No log files found in this run.")
-        return
-
-    for filename, content in logs:
-        click.secho(f"\n{'='*60}", fg="cyan")
-        click.secho(f" {filename}", fg="cyan", bold=True)
-        click.secho(f"{'='*60}", fg="cyan")
-        click.echo(content)
-
-    click.echo(f"\n({len(logs)} log file(s) printed)")
+    # Output
+    if output == "json":
+        click.echo(json.dumps(result.to_dict(), indent=2))
+    else:
+        click.echo(format_analysis(result))
 
 
-if __name__ == "__main__":
-    cli()
+# Register with your existing CLI group:
+# cli.add_command(classify_cmd, "classify")
