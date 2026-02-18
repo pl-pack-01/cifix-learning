@@ -5,12 +5,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cifix"
-version = "0.1.0"
+version = "0.2.0"
 description = "A CLI tool built with Click"
 requires-python = ">=3.9"
 dependencies = [
     "click>=8.1",
     "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
 ]
 
 [project.scripts]
