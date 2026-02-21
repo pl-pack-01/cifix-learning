@@ -29,7 +29,7 @@ def fetch_run_logs(repo, run_id, token):
     resp = requests.get(url, headers=get_headers(token), allow_redirects=True)
 
     if resp.status_code == 404:
-        raise click.ClickException(
+        raise RuntimeError(
             f"Run {run_id} not found in {repo}. "
             "Check the repo name and run ID, or ensure logs haven't expired."
         )
@@ -39,6 +39,6 @@ def fetch_run_logs(repo, run_id, token):
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
         for name in sorted(zf.namelist()):
             if name.endswith(".txt"):
-                content = zf.read(name).decode("utf-8", errors="replace")
+                content = zf.read(name).decode("utf-8-sig", errors="replace")
                 logs.append((name, content))
     return logs

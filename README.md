@@ -1,6 +1,6 @@
 # Cifix
 
-A CLI tool for fetching and analyzing CI logs from GitHub Actions.
+A CLI tool for fetching, analyzing, and classifying CI logs from GitHub Actions.
 
 ## Installation
 
@@ -31,29 +31,57 @@ Or pass it directly with `--token`.
 ### Fetch workflow run logs
 
 ```bash
-cifix fetch-logs <owner/repo> <run_id>
+cifix logs <run_id> --repo <owner/repo>
 ```
 
 The run ID is the number in the GitHub Actions URL:
 `github.com/owner/repo/actions/runs/12345678`
 
+### Classify errors in a CI run
+
+```bash
+cifix classify <run_id> --repo <owner/repo>
+```
+
+Classifies errors as infrastructure (pipeline/environment) or code issues, with severity levels (fatal, error, warning).
+
 ### Examples
 
 ```bash
-# Using $GITHUB_TOKEN env var
-cifix fetch-logs octocat/hello-world 12345678
+# Fetch raw logs
+cifix logs 12345678 --repo octocat/hello-world
 
-# Passing token directly
-cifix fetch-logs myorg/myrepo 99999999 --token ghp_xxx
+# Classify errors
+cifix classify 12345678 --repo octocat/hello-world
+
+# Classify with filters
+cifix classify 12345678 --repo octocat/hello-world --category code --severity error
+
+# JSON output
+cifix classify 12345678 --repo octocat/hello-world --output json
+
+# Pass token directly
+cifix logs 12345678 --repo myorg/myrepo --token ghp_xxx
 ```
 
 ### Options
 
 ```
-cifix --help             Show all commands
-cifix --version          Show version
-cifix fetch-logs --help  Show fetch-logs options
+cifix --help              Show all commands
+cifix logs --help         Show logs options
+cifix classify --help     Show classify options
 ```
+
+#### Classify options
+
+| Option | Description |
+|--------|-------------|
+| `--repo`, `-r` | GitHub repo (owner/repo) — required |
+| `--token`, `-t` | GitHub token (or set GITHUB_TOKEN env var) |
+| `--provider`, `-p` | CI provider: github, gitlab, jenkins (default: github) |
+| `--output`, `-o` | Output format: text, json (default: text) |
+| `--category`, `-c` | Filter by category: all, infra, code (default: all) |
+| `--severity`, `-s` | Minimum severity: all, fatal, error, warning (default: all) |
 
 ## Project Structure
 
@@ -64,8 +92,12 @@ cifix/
 └── src/
     └── cifix/
         ├── __init__.py
-        ├── cli.py          # Click CLI entry point
-        └── github.py       # GitHub API client
+        ├── cli.py            # Click CLI entry point
+        ├── github.py         # GitHub API client
+        ├── classifier.py     # Error classification engine
+        ├── patterns.py       # Regex pattern registry
+        ├── preprocessor.py   # Log cleaning and step splitting
+        └── formatter.py      # Human-readable output formatting
 ```
 
 ## License

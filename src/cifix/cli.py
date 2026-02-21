@@ -1,24 +1,49 @@
-
-"""
-Add this command to your existing Click CLI.
-
-Assumes Phase 1 gave you something like:
-    from cifix.github import fetch_run_logs
-that returns raw log text for a given run ID.
-"""
+"""cifix CLI – CI failure analyzer."""
 
 import json
+import os
 import click
 
-# -- Paste/merge into your existing cli.py --
 
-# from cifix.github import fetch_run_logs      # your Phase 1 function
-# from cifix.classifier import classify
-# from cifix.formatter import format_analysis   # see below
+def get_token(token):
+    """Resolve GitHub token from option or environment."""
+    token = token or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise click.ClickException(
+            "GitHub token required. Pass --token or set GITHUB_TOKEN env var."
+        )
+    return token
 
 
-@click.command()
+@click.group()
+def cli():
+    """cifix – CI failure analyzer."""
+    pass
+
+
+@cli.command()
 @click.argument("run_id")
+@click.option("--repo", "-r", required=True, help="GitHub repo (owner/repo).")
+@click.option("--token", "-t", default=None, help="GitHub token (or set GITHUB_TOKEN env var).")
+def logs(run_id, repo, token):
+    """Fetch and display logs for a CI run."""
+    from cifix.github import fetch_run_logs
+
+    token = get_token(token)
+    click.echo(f"Fetching logs for run {run_id} in {repo}...")
+    log_files = fetch_run_logs(repo, run_id, token)
+
+    for filename, content in log_files:
+        click.echo(f"\n{'=' * 60}")
+        click.echo(f"  {filename}")
+        click.echo(f"{'=' * 60}")
+        click.echo(content)
+
+
+@cli.command("classify")
+@click.argument("run_id")
+@click.option("--repo", "-r", required=True, help="GitHub repo (owner/repo).")
+@click.option("--token", "-t", default=None, help="GitHub token (or set GITHUB_TOKEN env var).")
 @click.option(
     "--provider", "-p",
     default="github",
@@ -42,15 +67,19 @@ import click
     default="all",
     help="Minimum severity to show.",
 )
-def classify_cmd(run_id, provider, output, category, severity):
+def classify_cmd(run_id, repo, token, provider, output, category, severity):
     """Classify errors in a CI run's logs."""
-    from cifix.classifier import classify, AnalysisResult
+    from cifix.classifier import classify
     from cifix.formatter import format_analysis
     from cifix.github import fetch_run_logs
     from cifix.patterns import ErrorCategory, ErrorSeverity
 
-    click.echo(f"Fetching logs for run {run_id}...")
-    raw_log = fetch_run_logs(run_id)
+    token = get_token(token)
+    click.echo(f"Fetching logs for run {run_id} in {repo}...")
+    log_files = fetch_run_logs(repo, run_id, token)
+
+    # Combine all log file contents into one string for classification
+    raw_log = "\n".join(content for _, content in log_files)
 
     click.echo("Classifying errors...")
     result = classify(raw_log, provider=provider)
@@ -71,7 +100,3 @@ def classify_cmd(run_id, provider, output, category, severity):
         click.echo(json.dumps(result.to_dict(), indent=2))
     else:
         click.echo(format_analysis(result))
-
-
-# Register with your existing CLI group:
-# cli.add_command(classify_cmd, "classify")
