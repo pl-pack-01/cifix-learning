@@ -1,4 +1,4 @@
-"""cifix CLI – CI failure analyzer."""
+"""cifix CLI - CI failure analyzer."""
 
 import json
 import os
@@ -17,7 +17,7 @@ def get_token(token):
 
 @click.group()
 def cli():
-    """cifix – CI failure analyzer."""
+    """cifix - CI failure analyzer."""
     pass
 
 
@@ -100,3 +100,9 @@ def classify_cmd(run_id, repo, token, provider, output, category, severity):
         click.echo(json.dumps(result.to_dict(), indent=2))
     else:
         click.echo(format_analysis(result))
+
+from cifix.cli.fix_cmd import fix_cmd
+from cifix.cli.diagnose_cmd import diagnose_cmd
+
+cli.add_command(fix_cmd)
+cli.add_command(diagnose_cmd)

@@ -1,6 +1,6 @@
 # Cifix
 
-A CLI tool for fetching, analyzing, and classifying CI logs from GitHub Actions.
+A CLI tool for fetching, analyzing, and auto-fixing CI failures from GitHub Actions.
 
 ## Installation
 
@@ -8,6 +8,12 @@ A CLI tool for fetching, analyzing, and classifying CI logs from GitHub Actions.
 git clone https://github.com/your-username/cifix.git
 cd cifix
 pip install -e .
+```
+
+Cifix requires [ruff](https://docs.astral.sh/ruff/) for auto-fix features:
+
+```bash
+pip install ruff
 ```
 
 ## Authentication
@@ -45,6 +51,22 @@ cifix classify <run_id> --repo <owner/repo>
 
 Classifies errors as infrastructure (pipeline/environment) or code issues, with severity levels (fatal, error, warning).
 
+### Apply ruff fixes locally
+
+```bash
+cifix fix [repo_path]
+```
+
+Runs `ruff format` and `ruff check --fix` on a local repository, displays unified diffs, and verifies the fixes took effect.
+
+### Diagnose and fix a CI failure end-to-end
+
+```bash
+cifix diagnose <run_id> --repo <owner/repo>
+```
+
+Chains the full pipeline: fetches logs → classifies errors → identifies ruff-fixable issues → applies fixes locally → verifies results.
+
 ### Examples
 
 ```bash
@@ -60,6 +82,27 @@ cifix classify 12345678 --repo octocat/hello-world --category code --severity er
 # JSON output
 cifix classify 12345678 --repo octocat/hello-world --output json
 
+# Fix ruff issues in the current directory
+cifix fix
+
+# Preview fixes without modifying files
+cifix fix ./my-repo --dry-run
+
+# Fix specific files or directories
+cifix fix -t src/ -t tests/
+
+# Full diagnose pipeline
+cifix diagnose 12345678 --repo octocat/hello-world
+
+# Diagnose with dry run (preview fixes)
+cifix diagnose 12345678 --repo octocat/hello-world --dry-run
+
+# Diagnose but only classify, skip fixing
+cifix diagnose 12345678 --repo octocat/hello-world --no-fix
+
+# Diagnose with JSON output
+cifix diagnose 12345678 --repo octocat/hello-world --json-output
+
 # Pass token directly
 cifix logs 12345678 --repo myorg/myrepo --token ghp_xxx
 ```
@@ -70,6 +113,8 @@ cifix logs 12345678 --repo myorg/myrepo --token ghp_xxx
 cifix --help              Show all commands
 cifix logs --help         Show logs options
 cifix classify --help     Show classify options
+cifix fix --help          Show fix options
+cifix diagnose --help     Show diagnose options
 ```
 
 #### Classify options
@@ -83,6 +128,32 @@ cifix classify --help     Show classify options
 | `--category`, `-c` | Filter by category: all, infra, code (default: all) |
 | `--severity`, `-s` | Minimum severity: all, fatal, error, warning (default: all) |
 
+#### Fix options
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Show what would change without modifying files |
+| `--no-verify` | Skip the post-fix verification step |
+| `--no-diff` | Suppress unified diff output |
+| `--format-only` | Run ruff format only (skip ruff check --fix) |
+| `--check-only` | Run ruff check --fix only (skip ruff format) |
+| `--target`, `-t` | Scope fixes to specific files or dirs (repeatable) |
+| `--json-output` | Output results as JSON |
+
+#### Diagnose options
+
+| Option | Description |
+|--------|-------------|
+| `--repo`, `-r` | GitHub repo (owner/repo) — required |
+| `--token`, `-t` | GitHub token (or set GITHUB_TOKEN env var) |
+| `--provider`, `-p` | CI provider (default: github) |
+| `--dry-run` | Preview fixes without modifying files |
+| `--no-fix` | Classify only, skip auto-fix |
+| `--no-verify` | Skip post-fix verification step |
+| `--no-diff` | Suppress unified diff output |
+| `--repo-path` | Local repo path (default: current directory) |
+| `--json-output` | Output everything as JSON |
+
 ## Project Structure
 
 ```
@@ -92,12 +163,17 @@ cifix/
 └── src/
     └── cifix/
         ├── __init__.py
-        ├── cli.py            # Click CLI entry point
-        ├── github.py         # GitHub API client
-        ├── classifier.py     # Error classification engine
-        ├── patterns.py       # Regex pattern registry
-        ├── preprocessor.py   # Log cleaning and step splitting
-        └── formatter.py      # Human-readable output formatting
+        ├── cli.py              # Click CLI entry point
+        ├── github.py           # GitHub API client
+        ├── classifier.py       # Error classification engine
+        ├── patterns.py         # Regex pattern registry
+        ├── preprocessor.py     # Log cleaning and step splitting
+        ├── formatter.py        # Human-readable output formatting
+        ├── cli/
+        │   ├── fix_cmd.py      # cifix fix command
+        │   └── diagnose_cmd.py # cifix diagnose command
+        └── fixer/
+            └── ruff_fixer.py   # Ruff auto-fix engine
 ```
 
 ## License
