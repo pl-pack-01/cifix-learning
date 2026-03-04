@@ -127,6 +127,7 @@ cifix diagnose --help     Show diagnose options
 | `--output`, `-o` | Output format: text, json (default: text) |
 | `--category`, `-c` | Filter by category: all, infra, code (default: all) |
 | `--severity`, `-s` | Minimum severity: all, fatal, error, warning (default: all) |
+| `--no-cache` | Bypass the local log cache |
 
 #### Fix options
 
@@ -153,6 +154,17 @@ cifix diagnose --help     Show diagnose options
 | `--no-diff` | Suppress unified diff output |
 | `--repo-path` | Local repo path (default: current directory) |
 | `--json-output` | Output everything as JSON |
+| `--no-cache` | Bypass the local log cache |
+
+## Caching
+
+Cifix caches downloaded workflow logs locally so repeated runs against the same run ID are near-instant. GitHub Actions logs are immutable once a run completes, so cached data stays valid.
+
+Cache location:
+- **Windows**: `%LOCALAPPDATA%\cifix\logs\`
+- **Linux/macOS**: `~/.cache/cifix/logs/`
+
+Pass `--no-cache` to any command to bypass the cache and re-fetch from GitHub.
 
 ## Project Structure
 
@@ -164,6 +176,7 @@ cifix/
     └── cifix/
         ├── __init__.py
         ├── cli.py              # Click CLI entry point
+        ├── cache.py            # Local disk cache for log downloads
         ├── github.py           # GitHub API client
         ├── classifier.py       # Error classification engine
         ├── patterns.py         # Regex pattern registry

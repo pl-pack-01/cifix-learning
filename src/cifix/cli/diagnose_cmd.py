@@ -24,6 +24,7 @@ from cifix.fixer.ruff_fixer import RuffFixer, format_fix_results
 @click.option("--no-diff", is_flag=True, help="Suppress unified diff output.")
 @click.option("--repo-path", default=".", type=click.Path(exists=True), help="Local repo path (default: cwd).")
 @click.option("--json-output", "as_json", is_flag=True, help="Output everything as JSON.")
+@click.option("--no-cache", is_flag=True, help="Bypass the local log cache.")
 def diagnose_cmd(
     run_id: str,
     repo: str,
@@ -35,6 +36,7 @@ def diagnose_cmd(
     no_diff: bool,
     repo_path: str,
     as_json: bool,
+    no_cache: bool,
 ) -> None:
     """Fetch CI logs, classify errors, and auto-fix what's possible.
 
@@ -54,7 +56,7 @@ def diagnose_cmd(
     # ── Phase 1: Observe ─────────────────────────────────────────────────
     if not as_json:
         click.echo(f"Fetching logs for run {run_id} in {repo}...")
-    log_files = fetch_run_logs(repo, run_id, token)
+    log_files = fetch_run_logs(repo, run_id, token, use_cache=not no_cache)
     raw_log = "\n".join(content for _, content in log_files)
 
     # ── Phase 2: Plan (classify) ─────────────────────────────────────────

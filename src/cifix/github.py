@@ -2,6 +2,8 @@ import io
 import zipfile
 import requests
 
+from cifix import cache
+
 
 GITHUB_API = "https://api.github.com"
 
@@ -14,17 +16,23 @@ def get_headers(token):
     }
 
 
-def fetch_run_logs(repo, run_id, token):
+def fetch_run_logs(repo, run_id, token, use_cache=True):
     """Download and extract workflow run logs from GitHub Actions.
 
     Args:
         repo: "owner/repo" string
         run_id: Workflow run ID
         token: GitHub personal access token
+        use_cache: Check local cache before hitting the API (default True)
 
     Returns:
         List of (filename, content) tuples for each log file.
     """
+    if use_cache:
+        cached = cache.get(repo, str(run_id))
+        if cached is not None:
+            return cached
+
     url = f"{GITHUB_API}/repos/{repo}/actions/runs/{run_id}/logs"
     resp = requests.get(url, headers=get_headers(token), allow_redirects=True)
 
@@ -41,4 +49,8 @@ def fetch_run_logs(repo, run_id, token):
             if name.endswith(".txt"):
                 content = zf.read(name).decode("utf-8-sig", errors="replace")
                 logs.append((name, content))
+
+    if use_cache:
+        cache.put(repo, str(run_id), logs)
+
     return logs

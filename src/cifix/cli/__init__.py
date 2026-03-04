@@ -25,13 +25,14 @@ def cli():
 @click.argument("run_id")
 @click.option("--repo", "-r", required=True, help="GitHub repo (owner/repo).")
 @click.option("--token", "-t", default=None, help="GitHub token (or set GITHUB_TOKEN env var).")
-def logs(run_id, repo, token):
+@click.option("--no-cache", is_flag=True, help="Bypass the local log cache.")
+def logs(run_id, repo, token, no_cache):
     """Fetch and display logs for a CI run."""
     from cifix.github import fetch_run_logs
 
     token = get_token(token)
     click.echo(f"Fetching logs for run {run_id} in {repo}...")
-    log_files = fetch_run_logs(repo, run_id, token)
+    log_files = fetch_run_logs(repo, run_id, token, use_cache=not no_cache)
 
     for filename, content in log_files:
         click.echo(f"\n{'=' * 60}")
@@ -67,7 +68,8 @@ def logs(run_id, repo, token):
     default="all",
     help="Minimum severity to show.",
 )
-def classify_cmd(run_id, repo, token, provider, output, category, severity):
+@click.option("--no-cache", is_flag=True, help="Bypass the local log cache.")
+def classify_cmd(run_id, repo, token, provider, output, category, severity, no_cache):
     """Classify errors in a CI run's logs."""
     from cifix.classifier import classify
     from cifix.formatter import format_analysis
@@ -76,7 +78,7 @@ def classify_cmd(run_id, repo, token, provider, output, category, severity):
 
     token = get_token(token)
     click.echo(f"Fetching logs for run {run_id} in {repo}...")
-    log_files = fetch_run_logs(repo, run_id, token)
+    log_files = fetch_run_logs(repo, run_id, token, use_cache=not no_cache)
 
     # Combine all log file contents into one string for classification
     raw_log = "\n".join(content for _, content in log_files)

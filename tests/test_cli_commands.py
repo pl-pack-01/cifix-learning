@@ -60,7 +60,7 @@ class TestLogsCommand:
         assert "job1/step2.txt" in result.output
         assert "Step 1 output" in result.output
         assert "something failed" in result.output
-        mock_fetch.assert_called_once_with("owner/repo", "12345", "fake-token")
+        mock_fetch.assert_called_once_with("owner/repo", "12345", "fake-token", use_cache=True)
 
     def test_missing_repo_flag(self, runner):
         result = runner.invoke(cli, ["logs", "12345", "-t", "fake-token"])
@@ -82,7 +82,7 @@ class TestLogsCommand:
             env={"GITHUB_TOKEN": "ghp_env_token"},
         )
         assert result.exit_code == 0
-        mock_fetch.assert_called_once_with("owner/repo", "12345", "ghp_env_token")
+        mock_fetch.assert_called_once_with("owner/repo", "12345", "ghp_env_token", use_cache=True)
 
 
 # -- cifix classify --------------------------------------------------------
